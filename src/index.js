@@ -1,3 +1,5 @@
+import { initPriceEngine } from './price.js'
+import { restoreStreams, startStreamTicks } from './streams.js'
 import express from 'express'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
@@ -19,7 +21,8 @@ const PORT  = process.env.PORT || 3000
 
 app.use(express.json())
 
-// Clients
+// ─── WebSocket clients ───────────────────────────────────────────────────────
+
 const clients = new Set()
 export function broadcast(type, data) {
   const m = JSON.stringify({ type, data, ts: Date.now() })
@@ -29,10 +32,13 @@ export function broadcast(type, data) {
 wss.on('connection', ws => {
   clients.add(ws)
   ws.on('close', () => clients.delete(ws))
-  buildState().then(d => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'tick', data: d }))).catch(() => {})
+  buildState()
+    .then(d => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'tick', data: d })))
+    .catch(() => {})
 })
 
-// Routes
+// ─── Routes ──────────────────────────────────────────────────────────────────
+
 app.get('/health', (_, res) => res.json({ ok: true, uptime: process.uptime() | 0 }))
 
 app.get('/api/state', async (_, res) => {
@@ -52,7 +58,8 @@ app.post('/api/withdraw', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
-// ModemPay webhook
+// ─── ModemPay webhook ─────────────────────────────────────────────────────────
+
 app.post('/webhook/modempay', async (req, res) => {
   res.json({ ok: true })
   try {
@@ -74,12 +81,14 @@ app.post('/webhook/modempay', async (req, res) => {
   } catch (e) { console.error('[WEBHOOK]', e.message) }
 })
 
+// ─── State builder ────────────────────────────────────────────────────────────
+
 async function buildState() {
-  const rev    = getRevenue()
-  const ts     = getTreasuryState()
-  const nets   = getNetworkStatus()
-  const streams= getStreamStats()
-  const fort   = getFortressStatus()
+  const rev     = getRevenue()
+  const ts      = getTreasuryState()
+  const nets    = getNetworkStatus()
+  const streams = getStreamStats()
+  const fort    = getFortressStatus()
   return {
     revenue:  rev,
     treasury: ts,
@@ -92,10 +101,18 @@ async function buildState() {
   }
 }
 
+// ─── Boot sequence ────────────────────────────────────────────────────────────
+
 async function boot() {
   console.log('[BLACK] Booting...')
   await initDB()
   await initNetworks()
+
+  // Price oracle — live before vaults/streams need quotes
+  await initPriceEngine()
+
+  // Restore persistent WebSocket streams (non-blocking)
+  restoreStreams()
 
   server.listen(PORT, () => console.log(`[BLACK] Live on :${PORT}`))
 
@@ -106,12 +123,17 @@ async function boot() {
 
   // Run Singularity immediately
   console.log('[BLACK] Starting Operation Singularity...')
-  runSingularity().then(() => {
-    console.log('[BLACK] Singularity complete → Starting Operation Fortress...')
-    runFortress().then(() => {
+  runSingularity()
+    .then(() => {
+      console.log('[BLACK] Singularity complete → Starting Operation Fortress...')
+      return runFortress()
+    })
+    .then(() => {
       console.log('[BLACK] Fortress complete → 47% capture locked')
-    }).catch(e => console.error('[FORTRESS]', e.message))
-  }).catch(e => console.error('[SINGULARITY]', e.message))
+      // Stream ticks begin only once Fortress is fully live
+      startStreamTicks()
+    })
+    .catch(e => console.error('[BOOT OPS]', e.message))
 }
 
 boot().catch(e => { console.error('[BOOT FATAL]', e.message); setTimeout(() => boot(), 5000) })
