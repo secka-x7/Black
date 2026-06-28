@@ -30,6 +30,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
 .body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin:1px 1px 0}
 .panel{background:var(--card);padding:24px}
 .panel-title{font-size:10px;color:var(--blue3);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+/* Fortress */
 .fortress-bar-wrap{background:#0a0a14;border:1px solid var(--border);border-radius:4px;height:8px;margin:12px 0 4px;overflow:hidden}
 .fortress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue3));transition:width 1s;border-radius:4px}
 .phase-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
@@ -40,6 +41,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
 .phase-dot.pending{background:var(--muted)}
 .phase-name{color:var(--text);flex:1}
 .phase-hour{color:var(--muted);font-size:10px}
+/* Networks */
 .net-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
 .net-row:last-child{border-bottom:none}
 .net-name{font-size:12px;color:var(--text);letter-spacing:1px}
@@ -47,10 +49,12 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
 .net-status.live{background:#0d2010;color:var(--green)}
 .net-status.connecting{background:#1a1400;color:var(--amber)}
 .net-status.error{background:#1a0808;color:var(--red)}
+/* Streams */
 .stream-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #0d0d0d}
 .stream-row:last-child{border-bottom:none}
 .stream-name{font-size:11px;color:var(--muted);flex:1}
 .stream-val{font-size:11px;color:var(--blue3);font-weight:600;text-align:right}
+/* Withdraw panel */
 .withdraw-panel{background:var(--card2);border:1px solid var(--blue);border-radius:6px;padding:20px;margin-top:16px}
 .withdraw-title{font-size:10px;color:var(--blue3);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
 .available-amt{font-size:28px;font-weight:700;color:var(--text);margin-bottom:16px}
@@ -63,11 +67,16 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
 .btn:disabled{background:var(--muted);cursor:not-allowed}
 .withdraw-msg{font-size:11px;color:var(--green);margin-top:8px;min-height:16px}
 .withdraw-err{font-size:11px;color:var(--red);margin-top:8px}
+/* Tx feed */
 .tx-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #0d0d0d;font-size:11px}
 .tx-row:last-child{border-bottom:none}
 .tx-type{color:var(--muted);letter-spacing:1px}
 .tx-amount{color:var(--blue3);font-weight:600}
 .tx-source{color:var(--muted);font-size:10px}
+/* Singularity */
+.sing-phase{font-size:11px;color:var(--blue3);padding:6px 0;border-bottom:1px solid var(--border)}
+.sing-phase:last-child{border-bottom:none}
+/* Bottom metrics */
 .bottom{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);margin:1px 1px 1px}
 .mini-metric{background:var(--card);padding:16px 20px}
 .mini-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
@@ -85,6 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
   </div>
 </div>
 
+<!-- Top metrics -->
 <div class="grid">
   <div class="metric">
     <div class="metric-label">Total Revenue</div>
@@ -111,8 +121,10 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
   </div>
 </div>
 
+<!-- Body -->
 <div class="body">
 
+  <!-- Operation Fortress -->
   <div class="panel">
     <div class="panel-title">Operation Fortress</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -124,6 +136,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
     <div class="phase-list" id="phase-list"></div>
   </div>
 
+  <!-- Networks + Streams -->
   <div class="panel">
     <div class="panel-title">Network Status</div>
     <div class="net-row"><span class="net-name">XRPL</span><span class="net-status connecting" id="net-xrpl">CONNECTING</span></div>
@@ -136,6 +149,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
     <div id="stream-list"></div>
   </div>
 
+  <!-- Withdraw + Tx Feed -->
   <div class="panel">
     <div class="panel-title">Treasury & Withdrawal</div>
     <div class="withdraw-panel">
@@ -156,6 +170,7 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
   </div>
 </div>
 
+<!-- Bottom metrics -->
 <div class="bottom">
   <div class="mini-metric"><div class="mini-label">Hour Revenue</div><div class="mini-value" id="rev-hour">$0</div></div>
   <div class="mini-metric"><div class="mini-label">Active Streams</div><div class="mini-value" id="active-streams">0 / 47</div></div>
@@ -166,176 +181,125 @@ body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospa
 </div>
 
 <script>
-// ── Demo data so the UI is fully visible without a live server ──────────────
-const DEMO_PHASES = [
-  {id:1,name:'PERIMETER',hour:0},{id:2,name:'INSERTION',hour:1},
-  {id:3,name:'DEPTH CASCADE',hour:2},{id:4,name:'CORRIDOR DOMINANCE',hour:3},
-  {id:5,name:'ARBITRAGE ACCEL',hour:4},{id:6,name:'LIQUIDITY VACUUM',hour:5},
-  {id:7,name:'RATE OPTIMIZATION',hour:6},{id:8,name:'NETWORK LOCK',hour:7},
-  {id:9,name:'INSTITUTIONAL DETECT',hour:8},{id:10,name:'FORTRESS COMPLETE',hour:9}
-]
-const DEMO_STREAMS = [
-  {id:'S3', name:'XRPL Flow',        total:48320.44},
-  {id:'S10',name:'Cross-Net Arb',    total:31205.18},
-  {id:'S7', name:'XRPL CLOB',        total:22841.90},
-  {id:'S9', name:'AMM Fees',         total:17630.55},
-  {id:'S15',name:'Stellar Pool',     total:9412.22},
-  {id:'S16',name:'XRPL AMM',         total:7804.11},
-  {id:'S11',name:'CBDC Corridor',    total:5933.67},
-  {id:'S47',name:'Institutional',    total:3210.00},
-]
-const DEMO_TXS = [
-  {stream:'S3', source:'xrpl_flow',       amount:142.33},
-  {stream:'S10',source:'xrpl_stellar_arb',amount:87.12},
-  {stream:'S7', source:'xrpl_clob',       amount:63.45},
-  {stream:'S9', source:'amm_fees',        amount:48.90},
-  {stream:'S3', source:'corridor_lock',   amount:212.77},
-  {stream:'S15',source:'stellar_amm_tick',amount:21.04},
-  {stream:'S11',source:'cbdc_corridor',   amount:164.50},
-  {stream:'S10',source:'hedera_algo_arb', amount:55.88},
-]
-
-let _prevRev = 0, _demoPhase = 7, _bootTime = Date.now()
+let ws, _d = {}, _prevRev = 0, _tick = 0
 
 const $ = id => document.getElementById(id)
 
-function fmtM(n){
-  if(!n||n===0)return'0.00'
-  if(n>=1e9)return(n/1e9).toFixed(2)+'B'
-  if(n>=1e6)return(n/1e6).toFixed(2)+'M'
-  if(n>=1e3)return(n/1e3).toFixed(1)+'K'
-  return n.toFixed(2)
-}
-function fmt2(n){return(n||0).toFixed(2)}
-function fmtTime(s){
-  if(s<60)return s+'s'
-  if(s<3600)return Math.floor(s/60)+'m '+(s%60)+'s'
-  return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m'
-}
-
-function renderDemo() {
-  const uptime = Math.floor((Date.now() - _bootTime) / 1000)
-
-  // Header
-  $('conn-dot').style.background = 'var(--green)'
-  $('conn-text').textContent = 'LIVE'
-  $('uptime-text').textContent = 'UP: ' + fmtTime(uptime)
-
-  // Top metrics
-  const totalRev = 146802.47 + (uptime * 4.12)
-  $('rev-total').textContent = '$' + fmtM(totalRev)
-  const delta = totalRev - _prevRev
-  if(delta > 0) $('rev-rate').textContent = '+$' + fmt2(delta) + ' since last tick'
-  _prevRev = totalRev
-  $('rev-today').textContent = '$' + fmtM(38210.55 + uptime * 1.8)
-  $('rev-txs').textContent   = (14832 + uptime * 2).toLocaleString() + ' transactions'
-  $('rev-hour').textContent  = '$' + fmtM(6240.10 + uptime * 0.3)
-  $('capture-rate').textContent = '47%'
-  $('daily-equiv').textContent  = '~$' + fmtM(5100000000 * 0.47) + '/day equiv'
-  $('treasury-avail').textContent    = '$' + fmtM(22481.33 + uptime * 0.9)
-  $('withdraw-available').textContent= '$' + fmtM(22481.33 + uptime * 0.9) + ' available'
-  $('yield-tier').textContent = 'Yield tier: amm_compound'
-  $('apy-text').textContent   = '5.2% APY'
-  $('xrpl-amm').textContent   = '$' + fmtM(7804.11)
-  $('stellar-amm').textContent= '$' + fmtM(4120.55)
-  $('total-withdrawn').textContent = '$' + fmtM(1250.00)
-  $('active-streams').textContent  = '31 / 47'
-  $('mem-mb').textContent          = '148MB'
-
-  // Fortress
-  $('fort-phase-name').textContent = 'RATE OPTIMIZATION'
-  $('fort-elapsed').textContent    = '7.12h'
-  $('fort-bar').style.width        = '70%'
-  $('fort-pct').textContent        = '7 / 10 phases complete'
-  $('phase-list').innerHTML = DEMO_PHASES.map(p => `
-    <div class="phase">
-      <div class="phase-dot ${p.id < 8 ? 'done' : p.id === 8 ? 'active' : 'pending'}"></div>
-      <div class="phase-name">${p.name}</div>
-      <div class="phase-hour">H${p.hour}</div>
-    </div>`).join('')
-
-  // Networks
-  const nets = {xrpl:'live',stellar:'live',hedera:'live',algo:'connecting',modem:'live'}
-  Object.entries(nets).forEach(([net,status]) => {
-    const el = $('net-'+net)
-    if(el){ el.textContent = status.toUpperCase(); el.className = 'net-status '+status }
-  })
-
-  // Streams
-  $('stream-list').innerHTML = DEMO_STREAMS.map(s => `
-    <div class="stream-row">
-      <span class="stream-name">${s.name}</span>
-      <span class="stream-val">$${fmtM(s.total + uptime * Math.random())}</span>
-    </div>`).join('')
-
-  // Tx feed
-  $('tx-feed').innerHTML = DEMO_TXS.map(t => `
-    <div class="tx-row">
-      <span class="tx-type">${t.stream}</span>
-      <span class="tx-source">${t.source.slice(0,18)}</span>
-      <span class="tx-amount">+$${fmt2(t.amount + Math.random()*10)}</span>
-    </div>`).join('')
-}
-
-// Live tick flash
-function flashTick() {
-  const s = DEMO_STREAMS[Math.floor(Math.random() * DEMO_STREAMS.length)]
-  const amt = (Math.random() * 200 + 10).toFixed(2)
-  $('rev-tick').textContent = `▲ +$${amt} (${s.name.toLowerCase().replace(' ','_')})`
-  setTimeout(() => { $('rev-tick').textContent = '' }, 2000)
-}
-
-// Try live WS — fall back to demo gracefully
 function connect() {
-  try {
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${proto}//${location.host}`)
-    ws.onopen    = () => { fetch('/api/state').then(r=>r.json()).then(render).catch(()=>{}) }
-    ws.onmessage = e => { try { const m=JSON.parse(e.data); if(m.data) render(m.data) } catch {} }
-    ws.onerror   = () => {} // demo mode takes over
-  } catch {}
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  ws = new WebSocket(`${proto}//${location.host}`)
+  ws.onopen    = () => { setConn(true); fetch('/api/state').then(r=>r.json()).then(render).catch(()=>{}) }
+  ws.onmessage = e => { try { const m=JSON.parse(e.data); if(m.data) render(m.data); handleEvent(m) } catch {} }
+  ws.onclose   = () => { setConn(false); setTimeout(connect, 3000) }
+  ws.onerror   = () => ws.close()
+}
+
+function setConn(ok) {
+  $('conn-dot').style.background  = ok ? 'var(--green)' : 'var(--amber)'
+  $('conn-text').textContent       = ok ? 'LIVE' : 'RECONNECTING'
+}
+
+function handleEvent(m) {
+  if (m.type === 'stream_credit' || m.type === 'revenue') {
+    const row = document.createElement('div')
+    row.className = 'tx-row'
+    row.innerHTML = `<span class="tx-type">${(m.data?.stream||m.data?.id||'—').toUpperCase()}</span><span class="tx-source">${(m.data?.source||'').slice(0,18)}</span><span class="tx-amount">+$${fmt2(m.data?.amount||0)}</span>`
+    const feed = $('tx-feed')
+    feed.insertBefore(row, feed.firstChild)
+    while (feed.children.length > 12) feed.removeChild(feed.lastChild)
+    // Flash tick
+    _tick++
+    $('rev-tick').textContent = `▲ +$${fmt2(m.data?.amount||0)} (${m.data?.source||''})`
+    setTimeout(() => { $('rev-tick').textContent = '' }, 2000)
+  }
+  if (m.type === 'network') {
+    const el = $('net-' + m.data?.net)
+    if (el) { el.textContent = (m.data?.status||'').toUpperCase(); el.className = 'net-status ' + (m.data?.status||'connecting') }
+  }
+  if (m.type === 'fortress_complete') {
+    $('capture-rate').textContent = '47%'
+    $('fort-bar').style.width = '100%'
+  }
 }
 
 function render(d) {
   if (!d) return
-  // Real data renderer (identical to production version)
+  _d = d
   const rev = d.revenue || {}
   const ts  = d.treasury || {}
   const fort= d.fortress || {}
   const nets= d.networks || {}
-  $('conn-dot').style.background = 'var(--green)'
-  $('conn-text').textContent = 'LIVE'
+
+  // Revenue
   $('rev-total').textContent = '$' + fmtM(rev.total || 0)
   $('rev-today').textContent = '$' + fmtM(rev.today || 0)
   $('rev-txs').textContent   = (rev.txs||0).toLocaleString() + ' transactions'
   $('rev-hour').textContent  = '$' + fmtM(rev.hour || 0)
+
+  // Revenue rate
   const delta = (rev.total||0) - _prevRev
-  if(delta > 0) $('rev-rate').textContent = '+$' + fmt2(delta) + ' since last tick'
+  if (delta > 0) $('rev-rate').textContent = '+$' + fmt2(delta) + ' since last tick'
   _prevRev = rev.total || 0
+
+  // Capture rate
   const cap = ts.capture_rate || 0
   $('capture-rate').textContent = cap + '%'
-  $('daily-equiv').textContent  = cap > 0 ? '~$'+fmtM(5100000000*cap/100)+'/day equiv' : 'Fortress building...'
-  $('treasury-avail').textContent    = '$' + fmtM(ts.available || 0)
+  $('daily-equiv').textContent  = cap > 0 ? '~$' + fmtM(5100000000 * cap / 100) + '/day equiv' : 'Fortress building...'
+
+  // Treasury
+  $('treasury-avail').textContent   = '$' + fmtM(ts.available || 0)
   $('withdraw-available').textContent= '$' + fmtM(ts.available || 0) + ' available'
-  $('yield-tier').textContent = 'Yield tier: ' + (ts.yield_tier||'liquid')
-  $('apy-text').textContent   = ts.apy ? ts.apy + '% APY' : ''
-  $('xrpl-amm').textContent   = '$' + fmtM(ts.xrpl_amm || 0)
-  $('stellar-amm').textContent= '$' + fmtM(ts.stellar_amm || 0)
-  $('total-withdrawn').textContent = '$' + fmtM(ts.withdrawn || 0)
+  $('yield-tier').textContent        = 'Yield tier: ' + (ts.yield_tier||'liquid')
+  $('apy-text').textContent          = ts.apy ? ts.apy + '% APY' : ''
+  $('xrpl-amm').textContent         = '$' + fmtM(ts.xrpl_amm || 0)
+  $('stellar-amm').textContent      = '$' + fmtM(ts.stellar_amm || 0)
+  $('total-withdrawn').textContent   = '$' + fmtM(ts.withdrawn || 0)
+
+  // Fortress phases
   const phases = fort.phases || []
   const curPhase = fort.phase || 0
   $('fort-phase-name').textContent = fort.phaseName || 'Initializing...'
   $('fort-elapsed').textContent    = fort.elapsed || '0h'
-  $('fort-bar').style.width        = Math.min((curPhase/10)*100,100) + '%'
+  $('fort-bar').style.width        = Math.min((curPhase / 10) * 100, 100) + '%'
   $('fort-pct').textContent        = curPhase + ' / 10 phases complete'
-  if(phases.length) $('phase-list').innerHTML = phases.map(p=>`<div class="phase"><div class="phase-dot ${p.id<curPhase?'done':p.id===curPhase?'active':'pending'}"></div><div class="phase-name">${p.name}</div><div class="phase-hour">H${p.hour}</div></div>`).join('')
-  Object.entries(nets).forEach(([net,status])=>{ const el=$('net-'+net); if(el){el.textContent=status.toUpperCase();el.className='net-status '+status} })
+  if (phases.length) {
+    $('phase-list').innerHTML = phases.map(p => `
+      <div class="phase">
+        <div class="phase-dot ${p.id < curPhase ? 'done' : p.id === curPhase ? 'active' : 'pending'}"></div>
+        <div class="phase-name">${p.name}</div>
+        <div class="phase-hour">H${p.hour}</div>
+      </div>`).join('')
+  }
+
+  // Networks
+  Object.entries(nets).forEach(([net, status]) => {
+    const el = $('net-' + net)
+    if (el) { el.textContent = status.toUpperCase(); el.className = 'net-status ' + status }
+  })
+
+  // Streams
   const streams = d.streams?.streams || {}
-  const topStreams = Object.entries(streams).filter(([,s])=>s.total>0).sort((a,b)=>b[1].total-a[1].total).slice(0,10)
-  $('active-streams').textContent = Object.values(streams).filter(s=>s.total>0).length + ' / 47'
-  $('stream-list').innerHTML = topStreams.map(([id,s])=>`<div class="stream-row"><span class="stream-name">${s.name||id}</span><span class="stream-val">$${fmtM(s.total)}</span></div>`).join('')
+  const topStreams = Object.entries(streams).filter(([,s]) => s.total > 0).sort((a,b) => b[1].total - a[1].total).slice(0, 10)
+  const activeCount = Object.values(streams).filter(s => s.total > 0).length
+  $('active-streams').textContent = activeCount + ' / 47'
+  $('stream-list').innerHTML = topStreams.map(([id, s]) => `
+    <div class="stream-row">
+      <span class="stream-name">${s.name || id}</span>
+      <span class="stream-val">$${fmtM(s.total)}</span>
+    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:8px 0">Streams initializing...</div>'
+
+  // Recent txs
   const txs = d.recent || []
-  if(txs.length) $('tx-feed').innerHTML = txs.slice(0,10).map(t=>`<div class="tx-row"><span class="tx-type">${(t.stream||t.type||'—').toUpperCase()}</span><span class="tx-source">${(t.source||'').slice(0,16)}</span><span class="tx-amount">$${fmt2(t.amount||0)}</span></div>`).join('')
+  if (txs.length) {
+    $('tx-feed').innerHTML = txs.slice(0, 10).map(t => `
+      <div class="tx-row">
+        <span class="tx-type">${(t.stream||t.type||'—').toUpperCase()}</span>
+        <span class="tx-source">${(t.source||'').slice(0,16)}</span>
+        <span class="tx-amount">$${fmt2(t.amount||0)}</span>
+      </div>`).join('')
+  }
+
+  // System
   $('uptime-text').textContent = 'UP: ' + fmtTime(d.uptime || 0)
   $('mem-mb').textContent      = (d.memory || 0) + 'MB'
 }
@@ -343,25 +307,43 @@ function render(d) {
 async function doWithdraw() {
   const amount = parseFloat($('withdraw-amount').value)
   const dest   = $('withdraw-dest').value.trim()
-  const msg = $('withdraw-msg'), err = $('withdraw-err'), btn = $('withdraw-btn')
+  const msg    = $('withdraw-msg')
+  const err    = $('withdraw-err')
+  const btn    = $('withdraw-btn')
   msg.textContent = ''; err.textContent = ''
-  if(!amount||amount<=0){ err.textContent='Enter valid amount'; return }
-  if(!dest){ err.textContent='Enter Wave number'; return }
-  btn.disabled=true; btn.textContent='SENDING...'
+  if (!amount || amount <= 0) { err.textContent = 'Enter valid amount'; return }
+  if (!dest)                  { err.textContent = 'Enter Wave number';  return }
+  btn.disabled = true; btn.textContent = 'SENDING...'
   try {
-    const r = await fetch('/api/withdraw',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount,destination:dest})})
+    const r = await fetch('/api/withdraw', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, destination: dest })
+    })
     const data = await r.json()
-    if(data.ok){ msg.textContent=`✓ $${amount} sent to ${dest} — arrives in under 5 minutes`; $('withdraw-amount').value='' }
-    else err.textContent = data.error||'Withdrawal failed'
-  } catch(e){ err.textContent = e.message }
-  btn.disabled=false; btn.textContent='WITHDRAW'
+    if (data.ok) {
+      msg.textContent = `✓ $${amount} sent to ${dest} — arrives in under 5 minutes`
+      $('withdraw-amount').value = ''
+    } else { err.textContent = data.error || 'Withdrawal failed' }
+  } catch (e) { err.textContent = e.message }
+  btn.disabled = false; btn.textContent = 'WITHDRAW'
 }
 
-// Boot
+// Formatters
+function fmtM(n) {
+  if (!n || n === 0) return '0.00'
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B'
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M'
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K'
+  return n.toFixed(2)
+}
+function fmt2(n) { return (n||0).toFixed(2) }
+function fmtTime(s) {
+  if (s < 60)   return s + 's'
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's'
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm'
+}
+
 connect()
-renderDemo()
-setInterval(renderDemo, 3000)
-setInterval(flashTick, 1800)
 </script>
 </body>
 </html>
