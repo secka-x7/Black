@@ -1,5 +1,6 @@
 // Operation Fortress — 10 hours → 47% capture of $5.1B daily
 // 10 phases, fully autonomous, no human input required
+import { startStreamTicks } from './streams.js'
 import fetch from 'node-fetch'
 import Anthropic from '@anthropic-ai/sdk'
 import { setConfig, getConfig, recordEvent, getTreasuryState } from './treasury.js'
@@ -234,7 +235,7 @@ async function phase9_institutionalDetect() {
   return detected
 }
 
-async function phase10_fortressComplete() {
+async function phase10_fortressComplete() startStreamTicks() {
   // Final lock — 47% capture permanently established
   _status.capture = 47
   setConfig('fortress_complete', '1')
