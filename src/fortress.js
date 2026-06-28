@@ -31,7 +31,8 @@ const GECKO   = 'https://api.coingecko.com/api/v3'
 let _status = { active: false, phase: 0, phaseName: '', capture: 0, startTime: 0, phases: [] }
 export const getFortressStatus = () => ({ ..._status, elapsed: _status.startTime ? ((Date.now() - _status.startTime) / 3600000).toFixed(2) + 'h' : '0h' })
 
-// Phase implementations
+// ─── Phase implementations ────────────────────────────────────────────────────
+
 async function phase1_perimeter() {
   // Map competing market makers — query order books on all networks
   const results = { xrpl: 0, stellar: 0, hedera: 0, algo: 0, gaps: [] }
@@ -235,13 +236,16 @@ async function phase9_institutionalDetect() {
   return detected
 }
 
-async function phase10_fortressComplete() startStreamTicks() {
+async function phase10_fortressComplete() {
   // Final lock — 47% capture permanently established
   _status.capture = 47
   setConfig('fortress_complete', '1')
   setConfig('capture_rate', '47')
   recordEvent('fortress_complete', { capture: 47, timestamp: Date.now() })
   broadcast('fortress_complete', { capture: 47, dailyTarget: 5100000000 * 0.47 })
+
+  // Start stream ticks now that Fortress is fully live
+  startStreamTicks()
 
   // Permanent revenue loop — fires every 10s forever
   setInterval(async () => {
@@ -255,17 +259,19 @@ async function phase10_fortressComplete() startStreamTicks() {
       const feeRate    = 0.005 * (mults.S3 || 1.0) // 0.5% blended fee
       const tickRev    = tickFlow * feeRate
       if (tickRev > 0) {
-        creditStream('S3', tickRev * 0.4, 'xrpl_flow')
-        creditStream('S7', tickRev * 0.2, 'xrpl_clob')
-        creditStream('S9', tickRev * 0.15,'amm_fees')
-        creditStream('S10',tickRev * 0.15,'cross_net_arb')
-        creditStream('S11',tickRev * 0.1, 'cbdc_corridor')
+        creditStream('S3',  tickRev * 0.40, 'xrpl_flow')
+        creditStream('S7',  tickRev * 0.20, 'xrpl_clob')
+        creditStream('S9',  tickRev * 0.15, 'amm_fees')
+        creditStream('S10', tickRev * 0.15, 'cross_net_arb')
+        creditStream('S11', tickRev * 0.10, 'cbdc_corridor')
       }
     } catch {}
   }, 10000)
 
   return true
 }
+
+// ─── Main orchestrator ────────────────────────────────────────────────────────
 
 export async function runFortress() {
   if (getConfig('fortress_complete') === '1') {
@@ -277,8 +283,6 @@ export async function runFortress() {
   _status = { active: true, phase: 0, phaseName: 'INITIALIZING', capture: 0, startTime: Date.now(), phases: PHASES }
   broadcast('fortress', { phase: 0, message: 'Operation Fortress initiated — 10 hours to 47% capture' })
 
-  const phaseDelay = 3600000 // 1 hour per phase in production
-  // In first run, execute all phases sequentially
   const run = async (fn, id, name) => {
     _status.phase = id; _status.phaseName = name
     broadcast('fortress', { phase: id, name, message: `Phase ${id}: ${name}` })
