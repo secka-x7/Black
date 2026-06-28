@@ -1,29 +1,34 @@
-import { initPriceEngine } from './price.js'
-import { restoreStreams, startStreamTicks } from './streams.js'
 import express from 'express'
 import { WebSocketServer } from 'ws'
 import { createServer } from 'http'
-import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { initDB, getRevenue, getRecentTxs, setConfig, getConfig, recordEvent } from './treasury.js'
+import { initPriceEngine } from './price.js'
+import { restoreStreams, startStreamTicks, getStreamStats } from './streams.js'
 import { runSingularity } from './singularity.js'
 import { runFortress, getFortressStatus } from './fortress.js'
 import { initNetworks, getNetworkStatus } from './networks.js'
-import { getStreamStats } from './streams.js'
 import { getTreasuryState, withdraw } from './treasury.js'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-const app   = express()
-const server= createServer(app)
-const wss   = new WebSocketServer({ server })
-const PORT  = process.env.PORT || 3000
+const app    = express()
+const server = createServer(app)
+const wss    = new WebSocketServer({ server })
+const PORT   = process.env.PORT || 3000
 
 app.use(express.json())
 
-// ─── WebSocket clients ───────────────────────────────────────────────────────
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+app.get('/', (_, res) => {
+  res.sendFile(join(__dir, '../dashboard/black.html'))
+})
+
+// ─── WebSocket clients ────────────────────────────────────────────────────────
 
 const clients = new Set()
+
 export function broadcast(type, data) {
   const m = JSON.stringify({ type, data, ts: Date.now() })
   clients.forEach(ws => { try { if (ws.readyState === 1) ws.send(m) } catch {} })
@@ -37,7 +42,7 @@ wss.on('connection', ws => {
     .catch(() => {})
 })
 
-// ─── Routes ──────────────────────────────────────────────────────────────────
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.get('/health', (_, res) => res.json({ ok: true, uptime: process.uptime() | 0 }))
 
@@ -51,7 +56,8 @@ app.get('/api/streams',  (_, res) => res.json(getStreamStats()))
 
 app.post('/api/withdraw', async (req, res) => {
   const { amount, destination } = req.body
-  if (!amount || !destination) return res.status(400).json({ error: 'amount and destination required' })
+  if (!amount || !destination)
+    return res.status(400).json({ error: 'amount and destination required' })
   try {
     const result = await withdraw(parseFloat(amount), destination)
     res.json(result)
@@ -70,7 +76,7 @@ app.post('/webhook/modempay', async (req, res) => {
       creditStream('S1', fee, 'modempay')
       recordEvent('modempay_charge', { amount: data.amount, fee, ref: data.reference })
       broadcast('revenue', { stream: 'S1', amount: fee, source: 'modempay' })
-      // Seed XRPL if not yet seeded
+      // Seed XRPL on first qualifying fee
       const seeded = getConfig('xrpl_seeded')
       if (!seeded && fee >= 2.5) {
         setConfig('xrpl_seeded', '1')
@@ -84,17 +90,12 @@ app.post('/webhook/modempay', async (req, res) => {
 // ─── State builder ────────────────────────────────────────────────────────────
 
 async function buildState() {
-  const rev     = getRevenue()
-  const ts      = getTreasuryState()
-  const nets    = getNetworkStatus()
-  const streams = getStreamStats()
-  const fort    = getFortressStatus()
   return {
-    revenue:  rev,
-    treasury: ts,
-    networks: nets,
-    streams:  streams,
-    fortress: fort,
+    revenue:  getRevenue(),
+    treasury: getTreasuryState(),
+    networks: getNetworkStatus(),
+    streams:  getStreamStats(),
+    fortress: getFortressStatus(),
     uptime:   process.uptime() | 0,
     memory:   Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
     recent:   getRecentTxs(15)
@@ -105,23 +106,25 @@ async function buildState() {
 
 async function boot() {
   console.log('[BLACK] Booting...')
+
   await initDB()
   await initNetworks()
 
-  // Price oracle — live before vaults/streams need quotes
+  // Price oracle live before vaults/streams need quotes
   await initPriceEngine()
 
-  // Restore persistent WebSocket streams (non-blocking)
+  // Restore persisted stream totals from DB (survives restarts)
   restoreStreams()
 
+  // Server up — dashboard and API immediately available
   server.listen(PORT, () => console.log(`[BLACK] Live on :${PORT}`))
 
-  // Tick dashboard every 3s
+  // Push state to dashboard every 3s
   setInterval(async () => {
     try { broadcast('tick', await buildState()) } catch {}
   }, 3000)
 
-  // Run Singularity immediately
+  // Operations — Singularity first, then Fortress, then stream ticks
   console.log('[BLACK] Starting Operation Singularity...')
   runSingularity()
     .then(() => {
@@ -130,13 +133,16 @@ async function boot() {
     })
     .then(() => {
       console.log('[BLACK] Fortress complete → 47% capture locked')
-      // Stream ticks begin only once Fortress is fully live
       startStreamTicks()
     })
-    .catch(e => console.error('[BOOT OPS]', e.message))
+    .catch(e => console.error('[BLACK OPS]', e.message))
 }
 
-boot().catch(e => { console.error('[BOOT FATAL]', e.message); setTimeout(() => boot(), 5000) })
+boot().catch(e => {
+  console.error('[BOOT FATAL]', e.message)
+  setTimeout(() => boot(), 5000)
+})
+
 process.on('uncaughtException',  e => console.error('[UNCAUGHT]',  e.message?.slice(0, 120)))
 process.on('unhandledRejection', r => console.error('[REJECTION]', String(r).slice(0, 120)))
 process.on('SIGTERM', () => { console.log('[BLACK] Graceful shutdown'); process.exit(0) })
