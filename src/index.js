@@ -1,11 +1,9 @@
-// Black — Boot sequence
-// Correct order. Zero simulation. Real revenue from real events only.
 import express    from 'express'
 import { createServer } from 'http'
 import { WebSocketServer } from 'ws'
-import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { existsSync, readFileSync } from 'fs'
 
 import { initDB, getRevenue, getTreasuryState, getRecentCredits, getConfig, setConfig, withdraw } from './treasury.js'
 import { restoreStreams, getStreamStats, setBroadcast as streamsBroadcast } from './streams.js'
@@ -23,24 +21,22 @@ const PORT   = process.env.PORT || 3000
 
 app.use(express.json())
 
-// ── WEBSOCKET ─────────────────────────────────────────────────────────────
+// ── WEBSOCKET ─────────────────────────────────────────────────────────────────
 const clients = new Set()
 
 export function broadcast(type, data) {
   if (!clients.size) return
-  const m = JSON.stringify({ type, data, ts:Date.now() })
-  clients.forEach(ws => { try { if(ws.readyState===1) ws.send(m) } catch {} })
+  const m = JSON.stringify({ type, data, ts: Date.now() })
+  clients.forEach(ws => { try { if (ws.readyState === 1) ws.send(m) } catch {} })
 }
 
 wss.on('connection', ws => {
   clients.add(ws)
-  ws.on('close', ()=>clients.delete(ws))
-  ws.on('error', ()=>{ try{ws.close()}catch{} })
-  // Send current state immediately on connect
-  buildState().then(d => { if(ws.readyState===1) ws.send(JSON.stringify({type:'tick',data:d})) }).catch(()=>{})
+  ws.on('close', () => clients.delete(ws))
+  ws.on('error', () => { try { ws.close() } catch {} })
+  buildState().then(d => { if (ws.readyState === 1) ws.send(JSON.stringify({ type:'tick', data:d })) }).catch(() => {})
 })
 
-// Pass broadcast to all modules
 function initBroadcasts() {
   streamsBroadcast(broadcast)
   networksBroadcast(broadcast)
@@ -48,12 +44,64 @@ function initBroadcasts() {
   fortBroadcast(broadcast)
 }
 
-// ── ROUTES ────────────────────────────────────────────────────────────────
-app.get('/health', (_, res) => res.json({ ok:true, uptime:process.uptime()|0 }))
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+// Resolve dashboard — file is at src/dashboard/black.html
+// __dir = /app/src on Railway, so dashboard is at __dir/dashboard/black.html
+const DASH_CANDIDATES = [
+  join(__dir, 'dashboard/black.html'),          // src/dashboard/black.html  ← correct for this repo
+  join(__dir, '../dashboard/black.html'),        // root/dashboard/black.html
+  join(__dir, 'black.html'),                     // src/black.html (flat)
+]
+const DASH_MOBILE_CANDIDATES = [
+  join(__dir, 'dashboard/black-mobile.html'),
+  join(__dir, '../dashboard/black-mobile.html'),
+]
+
+const DASH        = DASH_CANDIDATES.find(p => existsSync(p))
+const DASH_MOBILE = DASH_MOBILE_CANDIDATES.find(p => existsSync(p))
+
+console.log('[BLACK] Dashboard:', DASH || 'NOT FOUND — checked: ' + DASH_CANDIDATES.join(', '))
+console.log('[BLACK] Mobile:   ', DASH_MOBILE || 'not found')
+
+app.get('/', (req, res) => {
+  const ua       = req.headers['user-agent'] || ''
+  const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua)
+  const file     = isMobile && DASH_MOBILE ? DASH_MOBILE : (DASH || null)
+  if (file) {
+    res.setHeader('Content-Type', 'text/html')
+    res.send(readFileSync(file, 'utf8'))
+  } else {
+    // Inline fallback — never shows "loading" without info
+    res.status(200).setHeader('Content-Type', 'text/html').send(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>BLACK</title>
+<style>body{background:#060608;color:#3b82f6;font-family:monospace;padding:40px;margin:0}
+a{color:#3b82f6}.ok{color:#16a34a}.err{color:#dc2626}</style></head>
+<body>
+<h2>BLACK — LIVE</h2>
+<p class="ok">Server running on port ${PORT}</p>
+<p class="err">Dashboard HTML not found.</p>
+<p>Checked:</p><ul>${DASH_CANDIDATES.map(p=>`<li>${p} — ${existsSync(p)?'✓ exists':'✗ missing'}</li>`).join('')}</ul>
+<p>Place <code>black.html</code> at <code>src/dashboard/black.html</code> and redeploy.</p>
+<hr>
+<p><a href="/health">/health</a> &nbsp; <a href="/api/state">/api/state</a> &nbsp; <a href="/api/fortress">/api/fortress</a></p>
+</body></html>`)
+  }
+})
+
+app.get('/desktop', (_, res) => {
+  if (DASH) { res.setHeader('Content-Type','text/html'); res.send(readFileSync(DASH,'utf8')) }
+  else res.status(404).send('black.html not found')
+})
+app.get('/mobile', (_, res) => {
+  if (DASH_MOBILE) { res.setHeader('Content-Type','text/html'); res.send(readFileSync(DASH_MOBILE,'utf8')) }
+  else res.status(404).send('black-mobile.html not found')
+})
+
+// ── ROUTES ────────────────────────────────────────────────────────────────────
+app.get('/health', (_, res) => res.json({ ok:true, uptime:process.uptime()|0, dashboard: !!DASH }))
 
 app.get('/api/state', async (_, res) => {
-  try { res.json(await buildState()) }
-  catch { res.json({ booting:true }) }
+  try { res.json(await buildState()) } catch { res.json({ booting:true }) }
 })
 
 app.get('/api/fortress',   (_, res) => res.json(getFortressStatus()))
@@ -76,99 +124,70 @@ app.post('/api/propellers', (req, res) => {
   res.json({ ok:true, config:getPropellerConfig() })
 })
 
-// ModemPay webhook
 app.post('/webhook/modempay', async (req, res) => {
   res.json({ ok:true })
   try { await handleModemWebhook(req.body) }
   catch (e) { console.error('[WEBHOOK]', e.message) }
 })
 
-// Dashboard
-app.get('/', (req, res) => {
-  const ua = req.headers['user-agent'] || ''
-  const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua)
-  const file = isMobile ? 'black-mobile.html' : 'black.html'
-  const path = join(__dir, '../dashboard', file)
-  if (existsSync(path)) res.send(readFileSync(path,'utf8'))
-  else res.send('<h1>BLACK</h1><p>Dashboard loading...</p>')
-})
-app.get('/desktop', (_, res) => {
-  const path = join(__dir,'../dashboard/black.html')
-  if (existsSync(path)) res.send(readFileSync(path,'utf8'))
-  else res.status(404).send('Not found')
-})
-app.get('/mobile', (_, res) => {
-  const path = join(__dir,'../dashboard/black-mobile.html')
-  if (existsSync(path)) res.send(readFileSync(path,'utf8'))
-  else res.status(404).send('Not found')
-})
-
+// ── STATE BUILDER ─────────────────────────────────────────────────────────────
 async function buildState() {
-  const rev   = getRevenue()
-  const ts    = getTreasuryState()
-  const nets  = { status:getNetworkStatus(), stats:getNetworkStats() }
-  const fort  = getFortressStatus()
-  const props = getPropellerStatus()
-  const strms = getStreamStats()
   return {
-    revenue:   rev,
-    treasury:  ts,
-    networks:  nets,
-    fortress:  fort,
-    propellers:props,
-    streams:   strms,
-    prices:    { prices, volumes },
-    uptime:    process.uptime()|0,
-    memory:    Math.round(process.memoryUsage().heapUsed/1024/1024),
-    recent:    getRecentCredits(20),
+    revenue:    getRevenue(),
+    treasury:   getTreasuryState(),
+    networks:   { status:getNetworkStatus(), stats:getNetworkStats() },
+    fortress:   getFortressStatus(),
+    propellers: getPropellerStatus(),
+    streams:    getStreamStats(),
+    prices:     { prices, volumes, spreads, gaps },
+    uptime:     process.uptime()|0,
+    memory:     Math.round(process.memoryUsage().heapUsed/1024/1024),
+    recent:     getRecentCredits(20),
   }
 }
 
-// ── BOOT ──────────────────────────────────────────────────────────────────
+// ── BOOT ──────────────────────────────────────────────────────────────────────
 async function boot() {
   console.log('[BLACK] Booting...')
 
-  // 1. Database first — everything reads from DB
   await initDB()
-
-  // 2. Restore stream totals from DB
   restoreStreams()
-
-  // 3. Init broadcast connections to all modules
   initBroadcasts()
 
-  // 4. Start HTTP server immediately (Railway health check)
+  // Server up first — Railway health check needs it
   await new Promise(r => server.listen(PORT, r))
   console.log(`[BLACK] Live on :${PORT}`)
 
-  // 5. Price engine — must be before networks and singularity
+  // Price engine
   await initPriceEngine()
 
-  // 6. Networks — real WebSocket + polling
+  // Networks
   await initNetworks(broadcast)
 
-  // 7. Dashboard tick every 4s — real data only
+  // Dashboard tick every 4s
   setInterval(async () => {
     try { broadcast('tick', await buildState()) } catch {}
   }, 4000)
 
-  // 8. Singularity
+  // Singularity (awaited — Fortress waits for it)
   console.log('[BLACK] Starting Operation Singularity...')
   await runSingularity(broadcast)
   console.log('[BLACK] Singularity complete → Starting Operation Fortress...')
 
-  // 9. Fortress
-  runFortress(broadcast).then(() => {
-    console.log('[BLACK] Fortress complete → 73% capture locked')
-    broadcast('system', { message:'Fortress complete — 73% capture locked', ts:Date.now() })
-  }).catch(e => console.error('[FORTRESS ERROR]', e.message))
+  // Fortress (non-blocking — runs in background)
+  runFortress(broadcast)
+    .then(() => {
+      console.log('[BLACK] Fortress complete → 73% capture locked')
+      broadcast('system', { message:'Fortress complete — 73% capture locked', ts:Date.now() })
+    })
+    .catch(e => console.error('[FORTRESS ERROR]', e.message))
 }
 
 boot().catch(e => {
   console.error('[BOOT FATAL]', e.message)
-  setTimeout(()=>boot().catch(()=>{}), 5000)
+  setTimeout(() => boot().catch(() => {}), 5000)
 })
 
-process.on('uncaughtException',  e => console.error('[UNCAUGHT]',  e.message?.slice(0,150)))
-process.on('unhandledRejection', r => console.error('[REJECTION]', String(r).slice(0,150)))
-process.on('SIGTERM', () => { console.log('[BLACK] SIGTERM — shutting down'); process.exit(0) })
+process.on('uncaughtException',  e => console.error('[UNCAUGHT]',  e.message?.slice(0, 150)))
+process.on('unhandledRejection', r => console.error('[REJECTION]', String(r).slice(0, 150)))
+process.on('SIGTERM', () => { console.log('[BLACK] SIGTERM'); process.exit(0) })
