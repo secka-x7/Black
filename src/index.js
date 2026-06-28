@@ -12,6 +12,8 @@ import { initNetworks, getNetworkStatus } from './networks.js'
 import { getTreasuryState, withdraw } from './treasury.js'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
+const DASH  = join(__dir, 'dashboard/black.html')   // src/dashboard/black.html
+
 const app    = express()
 const server = createServer(app)
 const wss    = new WebSocketServer({ server })
@@ -21,9 +23,7 @@ app.use(express.json())
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-app.get('/', (_, res) => {
-  res.sendFile(join(__dir, '../dashboard/black.html'))
-})
+app.get('/', (_, res) => res.sendFile(DASH))
 
 // ─── WebSocket clients ────────────────────────────────────────────────────────
 
@@ -76,7 +76,6 @@ app.post('/webhook/modempay', async (req, res) => {
       creditStream('S1', fee, 'modempay')
       recordEvent('modempay_charge', { amount: data.amount, fee, ref: data.reference })
       broadcast('revenue', { stream: 'S1', amount: fee, source: 'modempay' })
-      // Seed XRPL on first qualifying fee
       const seeded = getConfig('xrpl_seeded')
       if (!seeded && fee >= 2.5) {
         setConfig('xrpl_seeded', '1')
@@ -109,22 +108,15 @@ async function boot() {
 
   await initDB()
   await initNetworks()
-
-  // Price oracle live before vaults/streams need quotes
   await initPriceEngine()
-
-  // Restore persisted stream totals from DB (survives restarts)
   restoreStreams()
 
-  // Server up — dashboard and API immediately available
   server.listen(PORT, () => console.log(`[BLACK] Live on :${PORT}`))
 
-  // Push state to dashboard every 3s
   setInterval(async () => {
     try { broadcast('tick', await buildState()) } catch {}
   }, 3000)
 
-  // Operations — Singularity first, then Fortress, then stream ticks
   console.log('[BLACK] Starting Operation Singularity...')
   runSingularity()
     .then(() => {
