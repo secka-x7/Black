@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Black</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080808;--card:#0d0d0d;--card2:#111318;
+  --border:#1a1f2e;--blue:#1d6fd8;--blue2:#2563eb;
+  --blue3:#3b82f6;--text:#e8eaf0;--muted:#4a5568;
+  --green:#16a34a;--red:#dc2626;--amber:#d97706
+}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono',Monaco,monospace;min-height:100vh;overflow-x:hidden}
+.header{padding:24px 32px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:20px}
+.logo{font-size:22px;font-weight:700;letter-spacing:6px;color:var(--blue3)}
+.status-row{display:flex;gap:12px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(22,163,74,.4)}50%{opacity:.8;box-shadow:0 0 0 6px rgba(22,163,74,0)}}
+.status-text{font-size:11px;color:var(--muted);letter-spacing:2px}
+.uptime{font-size:11px;color:var(--blue3);letter-spacing:1px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:1px}
+.metric{background:var(--card);padding:28px 24px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--blue),var(--blue2),transparent)}
+.metric-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.metric-value{font-size:32px;font-weight:700;color:var(--text);letter-spacing:-1px;line-height:1}
+.metric-sub{font-size:11px;color:var(--blue3);margin-top:8px;letter-spacing:1px}
+.metric-tick{font-size:11px;color:var(--green);margin-top:4px}
+.body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin:1px 1px 0}
+.panel{background:var(--card);padding:24px}
+.panel-title{font-size:10px;color:var(--blue3);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+/* Fortress */
+.fortress-bar-wrap{background:#0a0a14;border:1px solid var(--border);border-radius:4px;height:8px;margin:12px 0 4px;overflow:hidden}
+.fortress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue3));transition:width 1s;border-radius:4px}
+.phase-list{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.phase{display:flex;align-items:center;gap:8px;font-size:11px;padding:5px 0}
+.phase-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.phase-dot.done{background:var(--green)}
+.phase-dot.active{background:var(--blue3);animation:pulse 1.5s infinite}
+.phase-dot.pending{background:var(--muted)}
+.phase-name{color:var(--text);flex:1}
+.phase-hour{color:var(--muted);font-size:10px}
+/* Networks */
+.net-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.net-row:last-child{border-bottom:none}
+.net-name{font-size:12px;color:var(--text);letter-spacing:1px}
+.net-status{font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:1px}
+.net-status.live{background:#0d2010;color:var(--green)}
+.net-status.connecting{background:#1a1400;color:var(--amber)}
+.net-status.error{background:#1a0808;color:var(--red)}
+/* Streams */
+.stream-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #0d0d0d}
+.stream-row:last-child{border-bottom:none}
+.stream-name{font-size:11px;color:var(--muted);flex:1}
+.stream-val{font-size:11px;color:var(--blue3);font-weight:600;text-align:right}
+/* Withdraw panel */
+.withdraw-panel{background:var(--card2);border:1px solid var(--blue);border-radius:6px;padding:20px;margin-top:16px}
+.withdraw-title{font-size:10px;color:var(--blue3);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px}
+.available-amt{font-size:28px;font-weight:700;color:var(--text);margin-bottom:16px}
+.input-row{display:flex;gap:8px;margin-bottom:12px}
+.input-row input{flex:1;background:#0a0a0a;border:1px solid var(--border);color:var(--text);padding:10px 14px;font-size:13px;font-family:inherit;border-radius:4px;outline:none;transition:border .2s}
+.input-row input:focus{border-color:var(--blue)}
+.input-row input::placeholder{color:var(--muted)}
+.btn{background:var(--blue2);color:#fff;border:none;padding:10px 20px;font-size:12px;font-family:inherit;letter-spacing:2px;cursor:pointer;border-radius:4px;transition:background .2s;white-space:nowrap}
+.btn:hover{background:var(--blue3)}
+.btn:disabled{background:var(--muted);cursor:not-allowed}
+.withdraw-msg{font-size:11px;color:var(--green);margin-top:8px;min-height:16px}
+.withdraw-err{font-size:11px;color:var(--red);margin-top:8px}
+/* Tx feed */
+.tx-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #0d0d0d;font-size:11px}
+.tx-row:last-child{border-bottom:none}
+.tx-type{color:var(--muted);letter-spacing:1px}
+.tx-amount{color:var(--blue3);font-weight:600}
+.tx-source{color:var(--muted);font-size:10px}
+/* Singularity */
+.sing-phase{font-size:11px;color:var(--blue3);padding:6px 0;border-bottom:1px solid var(--border)}
+.sing-phase:last-child{border-bottom:none}
+/* Bottom metrics */
+.bottom{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--border);margin:1px 1px 1px}
+.mini-metric{background:var(--card);padding:16px 20px}
+.mini-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.mini-value{font-size:16px;font-weight:700;color:var(--blue3)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BLACK</div>
+  <div class="status-row">
+    <div class="dot" id="conn-dot" style="background:var(--amber)"></div>
+    <div class="status-text" id="conn-text">CONNECTING</div>
+    <div class="uptime" id="uptime-text">UP: 0s</div>
+  </div>
+</div>
+
+<!-- Top metrics -->
+<div class="grid">
+  <div class="metric">
+    <div class="metric-label">Total Revenue</div>
+    <div class="metric-value" id="rev-total">$0.00</div>
+    <div class="metric-sub" id="rev-rate">— / hr</div>
+    <div class="metric-tick" id="rev-tick"></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Today</div>
+    <div class="metric-value" id="rev-today">$0.00</div>
+    <div class="metric-sub" id="rev-txs">0 transactions</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Capture Rate</div>
+    <div class="metric-value" id="capture-rate">0%</div>
+    <div class="metric-sub">Target: 47% of $5.1B</div>
+    <div class="metric-tick" id="daily-equiv"></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Treasury Available</div>
+    <div class="metric-value" id="treasury-avail">$0.00</div>
+    <div class="metric-sub" id="yield-tier">Yield: Liquid</div>
+    <div class="metric-tick" id="apy-text"></div>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="body">
+
+  <!-- Operation Fortress -->
+  <div class="panel">
+    <div class="panel-title">Operation Fortress</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--muted)" id="fort-phase-name">Initializing...</span>
+      <span style="font-size:11px;color:var(--blue3)" id="fort-elapsed">0h</span>
+    </div>
+    <div class="fortress-bar-wrap"><div class="fortress-bar" id="fort-bar" style="width:0%"></div></div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:12px" id="fort-pct">0 / 10 phases</div>
+    <div class="phase-list" id="phase-list"></div>
+  </div>
+
+  <!-- Networks + Streams -->
+  <div class="panel">
+    <div class="panel-title">Network Status</div>
+    <div class="net-row"><span class="net-name">XRPL</span><span class="net-status connecting" id="net-xrpl">CONNECTING</span></div>
+    <div class="net-row"><span class="net-name">STELLAR</span><span class="net-status connecting" id="net-stellar">CONNECTING</span></div>
+    <div class="net-row"><span class="net-name">HEDERA</span><span class="net-status connecting" id="net-hedera">CONNECTING</span></div>
+    <div class="net-row"><span class="net-name">ALGORAND</span><span class="net-status connecting" id="net-algo">CONNECTING</span></div>
+    <div class="net-row"><span class="net-name">MODEMPAY</span><span class="net-status connecting" id="net-modem">CONNECTING</span></div>
+
+    <div class="panel-title" style="margin-top:20px">Top Revenue Streams</div>
+    <div id="stream-list"></div>
+  </div>
+
+  <!-- Withdraw + Tx Feed -->
+  <div class="panel">
+    <div class="panel-title">Treasury & Withdrawal</div>
+    <div class="withdraw-panel">
+      <div class="withdraw-title">Withdraw to Wave</div>
+      <div class="available-amt" id="withdraw-available">$0.00 available</div>
+      <div class="input-row">
+        <input type="number" id="withdraw-amount" placeholder="Amount (USD)" min="1" step="0.01">
+      </div>
+      <div class="input-row">
+        <input type="text" id="withdraw-dest" placeholder="Wave number">
+        <button class="btn" id="withdraw-btn" onclick="doWithdraw()">WITHDRAW</button>
+      </div>
+      <div class="withdraw-msg" id="withdraw-msg"></div>
+      <div class="withdraw-err" id="withdraw-err"></div>
+    </div>
+    <div class="panel-title" style="margin-top:20px">Live Transaction Feed</div>
+    <div id="tx-feed"></div>
+  </div>
+</div>
+
+<!-- Bottom metrics -->
+<div class="bottom">
+  <div class="mini-metric"><div class="mini-label">Hour Revenue</div><div class="mini-value" id="rev-hour">$0</div></div>
+  <div class="mini-metric"><div class="mini-label">Active Streams</div><div class="mini-value" id="active-streams">0 / 47</div></div>
+  <div class="mini-metric"><div class="mini-label">XRPL AMM</div><div class="mini-value" id="xrpl-amm">$0</div></div>
+  <div class="mini-metric"><div class="mini-label">Stellar Pool</div><div class="mini-value" id="stellar-amm">$0</div></div>
+  <div class="mini-metric"><div class="mini-label">Memory</div><div class="mini-value" id="mem-mb">0MB</div></div>
+  <div class="mini-metric"><div class="mini-label">Total Withdrawn</div><div class="mini-value" id="total-withdrawn">$0</div></div>
+</div>
+
+<script>
+let ws, _d = {}, _prevRev = 0, _tick = 0
+
+const $ = id => document.getElementById(id)
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  ws = new WebSocket(`${proto}//${location.host}`)
+  ws.onopen    = () => { setConn(true); fetch('/api/state').then(r=>r.json()).then(render).catch(()=>{}) }
+  ws.onmessage = e => { try { const m=JSON.parse(e.data); if(m.data) render(m.data); handleEvent(m) } catch {} }
+  ws.onclose   = () => { setConn(false); setTimeout(connect, 3000) }
+  ws.onerror   = () => ws.close()
+}
+
+function setConn(ok) {
+  $('conn-dot').style.background  = ok ? 'var(--green)' : 'var(--amber)'
+  $('conn-text').textContent       = ok ? 'LIVE' : 'RECONNECTING'
+}
+
+function handleEvent(m) {
+  if (m.type === 'stream_credit' || m.type === 'revenue') {
+    const row = document.createElement('div')
+    row.className = 'tx-row'
+    row.innerHTML = `<span class="tx-type">${(m.data?.stream||m.data?.id||'—').toUpperCase()}</span><span class="tx-source">${(m.data?.source||'').slice(0,18)}</span><span class="tx-amount">+$${fmt2(m.data?.amount||0)}</span>`
+    const feed = $('tx-feed')
+    feed.insertBefore(row, feed.firstChild)
+    while (feed.children.length > 12) feed.removeChild(feed.lastChild)
+    // Flash tick
+    _tick++
+    $('rev-tick').textContent = `▲ +$${fmt2(m.data?.amount||0)} (${m.data?.source||''})`
+    setTimeout(() => { $('rev-tick').textContent = '' }, 2000)
+  }
+  if (m.type === 'network') {
+    const el = $('net-' + m.data?.net)
+    if (el) { el.textContent = (m.data?.status||'').toUpperCase(); el.className = 'net-status ' + (m.data?.status||'connecting') }
+  }
+  if (m.type === 'fortress_complete') {
+    $('capture-rate').textContent = '47%'
+    $('fort-bar').style.width = '100%'
+  }
+}
+
+function render(d) {
+  if (!d) return
+  _d = d
+  const rev = d.revenue || {}
+  const ts  = d.treasury || {}
+  const fort= d.fortress || {}
+  const nets= d.networks || {}
+
+  // Revenue
+  $('rev-total').textContent = '$' + fmtM(rev.total || 0)
+  $('rev-today').textContent = '$' + fmtM(rev.today || 0)
+  $('rev-txs').textContent   = (rev.txs||0).toLocaleString() + ' transactions'
+  $('rev-hour').textContent  = '$' + fmtM(rev.hour || 0)
+
+  // Revenue rate
+  const delta = (rev.total||0) - _prevRev
+  if (delta > 0) $('rev-rate').textContent = '+$' + fmt2(delta) + ' since last tick'
+  _prevRev = rev.total || 0
+
+  // Capture rate
+  const cap = ts.capture_rate || 0
+  $('capture-rate').textContent = cap + '%'
+  $('daily-equiv').textContent  = cap > 0 ? '~$' + fmtM(5100000000 * cap / 100) + '/day equiv' : 'Fortress building...'
+
+  // Treasury
+  $('treasury-avail').textContent   = '$' + fmtM(ts.available || 0)
+  $('withdraw-available').textContent= '$' + fmtM(ts.available || 0) + ' available'
+  $('yield-tier').textContent        = 'Yield tier: ' + (ts.yield_tier||'liquid')
+  $('apy-text').textContent          = ts.apy ? ts.apy + '% APY' : ''
+  $('xrpl-amm').textContent         = '$' + fmtM(ts.xrpl_amm || 0)
+  $('stellar-amm').textContent      = '$' + fmtM(ts.stellar_amm || 0)
+  $('total-withdrawn').textContent   = '$' + fmtM(ts.withdrawn || 0)
+
+  // Fortress phases
+  const phases = fort.phases || []
+  const curPhase = fort.phase || 0
+  $('fort-phase-name').textContent = fort.phaseName || 'Initializing...'
+  $('fort-elapsed').textContent    = fort.elapsed || '0h'
+  $('fort-bar').style.width        = Math.min((curPhase / 10) * 100, 100) + '%'
+  $('fort-pct').textContent        = curPhase + ' / 10 phases complete'
+  if (phases.length) {
+    $('phase-list').innerHTML = phases.map(p => `
+      <div class="phase">
+        <div class="phase-dot ${p.id < curPhase ? 'done' : p.id === curPhase ? 'active' : 'pending'}"></div>
+        <div class="phase-name">${p.name}</div>
+        <div class="phase-hour">H${p.hour}</div>
+      </div>`).join('')
+  }
+
+  // Networks
+  Object.entries(nets).forEach(([net, status]) => {
+    const el = $('net-' + net)
+    if (el) { el.textContent = status.toUpperCase(); el.className = 'net-status ' + status }
+  })
+
+  // Streams
+  const streams = d.streams?.streams || {}
+  const topStreams = Object.entries(streams).filter(([,s]) => s.total > 0).sort((a,b) => b[1].total - a[1].total).slice(0, 10)
+  const activeCount = Object.values(streams).filter(s => s.total > 0).length
+  $('active-streams').textContent = activeCount + ' / 47'
+  $('stream-list').innerHTML = topStreams.map(([id, s]) => `
+    <div class="stream-row">
+      <span class="stream-name">${s.name || id}</span>
+      <span class="stream-val">$${fmtM(s.total)}</span>
+    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:8px 0">Streams initializing...</div>'
+
+  // Recent txs
+  const txs = d.recent || []
+  if (txs.length) {
+    $('tx-feed').innerHTML = txs.slice(0, 10).map(t => `
+      <div class="tx-row">
+        <span class="tx-type">${(t.stream||t.type||'—').toUpperCase()}</span>
+        <span class="tx-source">${(t.source||'').slice(0,16)}</span>
+        <span class="tx-amount">$${fmt2(t.amount||0)}</span>
+      </div>`).join('')
+  }
+
+  // System
+  $('uptime-text').textContent = 'UP: ' + fmtTime(d.uptime || 0)
+  $('mem-mb').textContent      = (d.memory || 0) + 'MB'
+}
+
+async function doWithdraw() {
+  const amount = parseFloat($('withdraw-amount').value)
+  const dest   = $('withdraw-dest').value.trim()
+  const msg    = $('withdraw-msg')
+  const err    = $('withdraw-err')
+  const btn    = $('withdraw-btn')
+  msg.textContent = ''; err.textContent = ''
+  if (!amount || amount <= 0) { err.textContent = 'Enter valid amount'; return }
+  if (!dest)                  { err.textContent = 'Enter Wave number';  return }
+  btn.disabled = true; btn.textContent = 'SENDING...'
+  try {
+    const r = await fetch('/api/withdraw', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, destination: dest })
+    })
+    const data = await r.json()
+    if (data.ok) {
+      msg.textContent = `✓ $${amount} sent to ${dest} — arrives in under 5 minutes`
+      $('withdraw-amount').value = ''
+    } else { err.textContent = data.error || 'Withdrawal failed' }
+  } catch (e) { err.textContent = e.message }
+  btn.disabled = false; btn.textContent = 'WITHDRAW'
+}
+
+// Formatters
+function fmtM(n) {
+  if (!n || n === 0) return '0.00'
+  if (n >= 1e9) return (n/1e9).toFixed(2) + 'B'
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M'
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K'
+  return n.toFixed(2)
+}
+function fmt2(n) { return (n||0).toFixed(2) }
+function fmtTime(s) {
+  if (s < 60)   return s + 's'
+  if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's'
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm'
+}
+
+connect()
+</script>
+</body>
+</html>
