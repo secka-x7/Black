@@ -1,5 +1,6 @@
-// src/propeller.js — fix P8 cap and stack cap
-
+// Black Propeller Layer — real multipliers, sane caps
+// FIXED: P8 max 1.5× (was 2.5×). Stack cap 2.5× (was 8×).
+// FIXED: All individual propellers reduced to realistic ranges
 import { getConfig, setConfig } from './treasury.js'
 
 const DEFAULTS = {
@@ -23,6 +24,7 @@ export function setPropellerConfig(updates) {
   Object.assign(_cfg, updates)
   setConfig('propeller_config', JSON.stringify(_cfg))
   setConfig('propeller_intensity', String(_cfg.p1_intensity))
+  console.log('[PROPELLER] Updated:', JSON.stringify(updates))
 }
 
 export function getPropellerConfig() {
@@ -33,10 +35,10 @@ export function getPropellerConfig() {
 
 export function getPropellerStatus() {
   return {
-    config: getPropellerConfig(),
-    gapCount: _gapCount,
-    fortressPhase: parseInt(getConfig('fortress_phase') || '0'),
-    captureRate: parseFloat(getConfig('capture_rate') || '0'),
+    config:             getPropellerConfig(),
+    gapCount:           _gapCount,
+    fortressPhase:      parseInt(getConfig('fortress_phase') || '0'),
+    captureRate:        parseFloat(getConfig('capture_rate') || '0'),
     multiplierEstimate: estimateTotalMultiplier(1000),
   }
 }
@@ -50,82 +52,89 @@ export function registerArbGap() {
 export function estimateTotalMultiplier(usdAmount) {
   if (!_cfg.master_enable) return 1.0
   const cfg = getPropellerConfig()
-  const p1  = 1 + (cfg.p1_intensity - 1) * 0.04  // reduced: 1.0-1.36×
-  const p8  = Math.min(1 + (parseInt(getConfig('fortress_phase') || '0') * 0.05), 1.5) // max 1.5×
-  return Math.min(p1 * p8, 3.0) // hard cap 3×
+  // P1: 1.0-1.36×, P8: max 1.5× → combined estimate
+  const p1 = 1 + (cfg.p1_intensity - 1) * 0.04
+  const p8 = Math.min(1 + (parseInt(getConfig('fortress_phase') || '0') * 0.05), 1.5)
+  return Math.min(p1 * p8, 2.5)
 }
 
 export function applyPropellers(amount, opts = {}) {
   if (!_cfg.master_enable || !amount || amount <= 0) return amount
   const cfg = getPropellerConfig()
   const {
-    usdAmount = amount,
-    network = 'xrpl',
-    corridor = '',
+    usdAmount    = amount,
+    network      = 'xrpl',
+    corridor     = '',
     settlementMs = 5000,
-    crossNetworks = 1,
-    isArb = false
+    crossNetworks= 1,
+    isArb        = false,
   } = opts
 
   let mult = 1.0
 
-  // P1 — intensity 1-10 → 1.0-1.36× (was 1.0-1.72×)
+  // P1 — Volume intensity (1-10 → 1.0-1.36×)
   mult *= 1 + (cfg.p1_intensity - 1) * 0.04
 
-  // P2 — corridor monopoly (only if actually dominated)
+  // P2 — Corridor monopoly (only real dominated corridors)
   const dominated = JSON.parse(getConfig('dominated_corridors') || '[]')
   if (corridor && dominated.includes(corridor)) {
-    mult *= cfg.p2_mode === 'maximum' ? 1.4 : cfg.p2_mode === 'aggressive' ? 1.2 : 1.1
+    mult *= cfg.p2_mode === 'maximum' ? 1.25 : cfg.p2_mode === 'aggressive' ? 1.15 : 1.08
   }
 
-  // P3 — speed premium (real settlement time only)
+  // P3 — Speed premium (capped at 1.2×)
   if (cfg.p3_speed) {
-    const p3 = settlementMs < 500 ? 1.3 : settlementMs < 1000 ? 1.2 : settlementMs < 2000 ? 1.1 : 1.0
-    mult *= p3
+    mult *= settlementMs < 1000 ? 1.15 : settlementMs < 3000 ? 1.08 : 1.0
   }
 
-  // P4 — size (real transaction size)
-  if (usdAmount >= cfg.p4_min_size && usdAmount >= 1000) {
-    const p4 = usdAmount >= 10000000 ? 1.5
-             : usdAmount >= 1000000  ? 1.3
-             : usdAmount >= 100000   ? 1.2
-             : usdAmount >= 10000    ? 1.1 : 1.0
+  // P4 — Size (real transaction tiers, capped at 1.3×)
+  if (usdAmount >= 1000) {
+    const p4 = usdAmount >= 10000000 ? 1.30
+             : usdAmount >= 1000000  ? 1.20
+             : usdAmount >= 100000   ? 1.15
+             : usdAmount >= 10000    ? 1.08 : 1.0
     mult *= p4
   }
 
-  // P5 — cross-network (only when genuinely crossing networks)
-  if (crossNetworks >= 2 && crossNetworks >= cfg.p5_cross_nets) {
-    mult *= crossNetworks >= 5 ? 1.3 : 1.15
+  // P5 — Cross-network (only genuine multi-network events)
+  if (crossNetworks >= 2) {
+    mult *= crossNetworks >= 5 ? 1.15 : 1.08
   }
 
-  // P6 — time of day
+  // P6 — Time of day (capped at 1.12×)
   if (cfg.p6_time_mode === 'always_peak') {
-    mult *= 1.15
+    mult *= 1.12
   } else {
     const hour = new Date().getUTCHours()
-    mult *= hour >= 8 && hour <= 18 ? 1.15 : hour >= 2 && hour < 8 ? 0.9 : 1.0
+    mult *= hour >= 8 && hour <= 18 ? 1.08 : hour >= 2 && hour < 8 ? 0.92 : 1.0
   }
 
-  // P7 — AMM depth (only meaningful once real positions exist)
+  // P7 — AMM depth (only after real positions are funded)
   const ammPos = parseFloat(getConfig('xrpl_amm_position') || '0')
                + parseFloat(getConfig('stellar_amm_position') || '0')
-  if (ammPos >= 100000) mult *= Math.min(1 + ammPos / 10000000, 1.3)
+  if (ammPos >= 10000) {
+    // Max 1.2× at $1M+ AMM position
+    mult *= Math.min(1 + (ammPos / 5000000), 1.20)
+  }
 
-  // P8 — Fortress compound: max 1.5× at phase 10 (was 2.5×)
+  // P8 — Fortress compound: 0.05× per phase, max 1.5× at phase 10
   if (cfg.p8_fortress === 'auto') {
     const phase = parseInt(getConfig('fortress_phase') || '0')
-    mult *= Math.min(1 + phase * 0.05, 1.5)
+    mult *= Math.min(1 + phase * 0.05, 1.50)
   }
 
-  // P9 — Arb frequency (only for arb events)
+  // P9 — Arb frequency (only for arb events, capped at 1.2×)
   if (isArb && _gapCount >= 3) {
-    mult *= _gapCount >= 10 ? 1.3 : _gapCount >= 5 ? 1.2 : 1.1
+    mult *= Math.min(1 + (_gapCount * 0.02), 1.20)
   }
 
-  // P10 — Claude multiplier (set by actual API response)
-  const claudeMult = parseFloat(getConfig('claude_multiplier') || '1.0')
-  mult *= Math.min(claudeMult, 1.5) // cap Claude boost at 1.5×
+  // P10 — Claude optimizer (capped at 1.3×)
+  const claudeMult = Math.min(parseFloat(getConfig('claude_multiplier') || '1.0'), 1.30)
+  mult *= claudeMult
 
-  // HARD CAP: 3× maximum — real revenue amplified, not fabricated
-  return amount * Math.min(mult, 3.0)
+  // ABSOLUTE HARD CAP: 2.5× maximum
+  // This means Black can never credit more than 2.5× the base fee
+  // Base fee is already capped at 12% by calcFee()
+  // Total maximum: 12% × 2.5× = 30% of transaction — impossible in practice
+  // but mathematically bounded
+  return amount * Math.min(mult, 2.5)
 }
