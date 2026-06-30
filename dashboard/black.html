@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BLACK OMEGA</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#070708;--panel:#0c0d10;--panel2:#101216;
+  --border:#1c2030;--line:#161a24;
+  --blue:#0a84ff;--blue-dim:#1e4d8c;--blue-glow:rgba(10,132,255,.15);
+  --steel:#3b4a66;--text:#e6e9ef;--muted:#5b6479;
+  --green:#1fb978;--amber:#d4922e;--red:#e0464a
+}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','SF Mono',Consolas,monospace;min-height:100vh;font-size:13px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--panel)}
+.brand{font-size:16px;font-weight:700;letter-spacing:8px;color:var(--text)}
+.brand span{color:var(--blue)}
+.topstats{display:flex;gap:32px;align-items:center}
+.tstat{display:flex;flex-direction:column;gap:2px}
+.tstat-label{font-size:9px;color:var(--muted);letter-spacing:2px}
+.tstat-value{font-size:13px;color:var(--blue);font-weight:600}
+.status-pill{display:flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid var(--border);border-radius:2px}
+.dot{width:6px;height:6px;background:var(--green);border-radius:50%}
+.dot.warn{background:var(--amber)}
+.dot.off{background:var(--muted)}
+
+.grid-main{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border)}
+.metric{background:var(--panel);padding:20px 24px;border-top:2px solid var(--blue-dim)}
+.metric-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.metric-value{font-size:28px;font-weight:700;letter-spacing:-0.5px;line-height:1}
+.metric-sub{font-size:10px;color:var(--steel);margin-top:6px;letter-spacing:1px}
+
+.ops-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin-top:1px}
+.op-card{background:var(--panel);padding:16px 20px}
+.op-name{font-size:9px;color:var(--blue);letter-spacing:2px;margin-bottom:8px}
+.op-bar-wrap{background:#0a0a0d;height:4px;border-radius:1px;overflow:hidden;margin-bottom:6px}
+.op-bar{height:100%;background:var(--blue);transition:width .6s}
+.op-status{font-size:10px;color:var(--muted)}
+
+.section{display:grid;grid-template-columns:2fr 1fr 1fr;gap:1px;background:var(--border);margin-top:1px}
+.panel{background:var(--panel);padding:18px 22px;max-height:480px;overflow-y:auto}
+.panel-title{font-size:9px;color:var(--blue);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+.parent-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.parent-card{border:1px solid var(--border);padding:10px 12px;background:var(--panel2)}
+.parent-name{font-size:10px;letter-spacing:1px;margin-bottom:4px}
+.parent-status{font-size:9px;letter-spacing:1px}
+.parent-status.live{color:var(--green)}
+.parent-status.monitoring{color:var(--amber)}
+.parent-status.connecting{color:var(--muted)}
+.parent-status.reconnecting{color:var(--amber)}
+
+.stream-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:11px}
+.stream-row:last-child{border-bottom:none}
+.stream-name{color:var(--muted)}
+.stream-val{color:var(--blue);font-weight:600}
+
+.tx-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:10px}
+.tx-row:last-child{border-bottom:none}
+.tx-id{color:var(--steel)}
+.tx-amt{color:var(--green);font-weight:600}
+
+.controls-section{background:var(--panel);margin-top:1px;padding:22px 28px}
+.controls-title{font-size:9px;color:var(--blue);letter-spacing:3px;text-transform:uppercase;margin-bottom:18px}
+.controls-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px}
+.ctl-group{display:flex;flex-direction:column;gap:6px}
+.ctl-label{font-size:9px;color:var(--muted);letter-spacing:1px;display:flex;justify-content:space-between}
+.ctl-label span{color:var(--blue)}
+.ctl-slider{-webkit-appearance:none;height:3px;background:var(--border);border-radius:2px;outline:none}
+.ctl-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--blue);border-radius:50%;cursor:pointer}
+.ctl-select{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:10px;font-family:inherit}
+
+.withdraw-section{background:var(--panel);margin-top:1px;padding:22px 28px;border-top:1px solid var(--blue-dim)}
+.withdraw-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end}
+.wd-field{display:flex;flex-direction:column;gap:6px}
+.wd-label{font-size:9px;color:var(--muted);letter-spacing:1px}
+.wd-input{background:#0a0a0d;border:1px solid var(--border);color:var(--text);padding:10px 12px;font-size:12px;font-family:inherit;outline:none}
+.wd-input:focus{border-color:var(--blue)}
+.wd-select{background:#0a0a0d;border:1px solid var(--border);color:var(--text);padding:10px 12px;font-size:12px;font-family:inherit}
+.wd-btn{background:var(--blue);color:#000;border:none;padding:10px 28px;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer}
+.wd-btn:hover{background:#3a9eff}
+.wd-btn:disabled{background:var(--steel);cursor:not-allowed}
+.wd-msg{font-size:10px;margin-top:10px;min-height:14px}
+.wd-msg.ok{color:var(--green)}
+.wd-msg.err{color:var(--red)}
+
+.scrollbar::-webkit-scrollbar{width:4px}
+.scrollbar::-webkit-scrollbar-thumb{background:var(--border)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">BLACK <span>OMEGA</span></div>
+  <div class="topstats">
+    <div class="tstat"><div class="tstat-label">UPTIME</div><div class="tstat-value" id="uptime">0s</div></div>
+    <div class="tstat"><div class="tstat-label">MEMORY</div><div class="tstat-value" id="memory">0MB</div></div>
+    <div class="status-pill"><div class="dot" id="conn-dot"></div><span id="conn-text">CONNECTING</span></div>
+  </div>
+</div>
+
+<div class="grid-main">
+  <div class="metric">
+    <div class="metric-label">Total Profit</div>
+    <div class="metric-value" id="profit-total">$0.00</div>
+    <div class="metric-sub" id="profit-delta"></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Today</div>
+    <div class="metric-value" id="profit-today">$0.00</div>
+    <div class="metric-sub" id="profit-hour">$0.00 / hour</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Capture Rate</div>
+    <div class="metric-value" id="capture-rate">0%</div>
+    <div class="metric-sub">Target: 97%</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Withdrawable</div>
+    <div class="metric-value" id="withdrawable">$0.00</div>
+    <div class="metric-sub" id="withdrawn-total">Withdrawn: $0.00</div>
+  </div>
+</div>
+
+<div class="ops-row">
+  <div class="op-card">
+    <div class="op-name">SINGULARITY</div>
+    <div class="op-bar-wrap"><div class="op-bar" id="bar-sing" style="width:0%"></div></div>
+    <div class="op-status" id="status-sing">Pending</div>
+  </div>
+  <div class="op-card">
+    <div class="op-name">SEQUENCE</div>
+    <div class="op-bar-wrap"><div class="op-bar" id="bar-seq" style="width:0%"></div></div>
+    <div class="op-status" id="status-seq">Pending</div>
+  </div>
+  <div class="op-card">
+    <div class="op-name">FORTRESS</div>
+    <div class="op-bar-wrap"><div class="op-bar" id="bar-fort" style="width:0%"></div></div>
+    <div class="op-status" id="status-fort">Pending</div>
+  </div>
+  <div class="op-card">
+    <div class="op-name">DOMINION</div>
+    <div class="op-bar-wrap"><div class="op-bar" id="bar-dom" style="width:0%"></div></div>
+    <div class="op-status" id="status-dom">Inactive</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="panel scrollbar">
+    <div class="panel-title">10 Parent Networks</div>
+    <div class="parent-grid" id="parent-grid"></div>
+  </div>
+  <div class="panel scrollbar">
+    <div class="panel-title">Top Revenue Streams</div>
+    <div id="stream-list"></div>
+  </div>
+  <div class="panel scrollbar">
+    <div class="panel-title">Live Ledger</div>
+    <div id="tx-feed"></div>
+  </div>
+</div>
+
+<div class="controls-section">
+  <div class="controls-title">Propeller Intensity — 10 General Propellers</div>
+  <div class="controls-grid">
+    <div class="ctl-group"><div class="ctl-label">GP1 VOLUME <span id="v-gp1">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp1"></div>
+    <div class="ctl-group"><div class="ctl-label">GP2 CORRIDOR <span id="v-gp2">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp2"></div>
+    <div class="ctl-group"><div class="ctl-label">GP3 SPEED <span id="v-gp3">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp3"></div>
+    <div class="ctl-group"><div class="ctl-label">GP4 SIZE <span id="v-gp4">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp4"></div>
+    <div class="ctl-group"><div class="ctl-label">GP5 MULTI-NET <span id="v-gp5">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp5"></div>
+    <div class="ctl-group"><div class="ctl-label">GP6 TEMPORAL <span id="v-gp6">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp6"></div>
+    <div class="ctl-group"><div class="ctl-label">GP7 AMM DEPTH <span id="v-gp7">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp7"></div>
+    <div class="ctl-group"><div class="ctl-label">GP8 FORTRESS <span id="v-gp8">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp8"></div>
+    <div class="ctl-group"><div class="ctl-label">GP9 ARB FREQ <span id="v-gp9">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp9"></div>
+    <div class="ctl-group"><div class="ctl-label">GP10 PARENT <span id="v-gp10">10</span></div><input type="range" class="ctl-slider" min="0" max="10" value="10" data-key="gp10"></div>
+  </div>
+  <div class="controls-title" style="margin-top:24px">Fee Structure</div>
+  <div class="controls-grid">
+    <div class="ctl-group"><div class="ctl-label">GLOBAL FEE <span id="v-fee">5%</span></div><input type="range" class="ctl-slider" min="1" max="10" value="5" step="0.5" data-key="global_fee" data-pct="1"></div>
+    <div class="ctl-group"><div class="ctl-label">DOMINION SENSITIVITY</div>
+      <select class="ctl-select" id="dominion-sens" data-key="dominion_sensitivity">
+        <option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high" selected>HIGH</option><option value="max">MAXIMUM</option>
+      </select>
+    </div>
+    <div class="ctl-group"><div class="ctl-label">FORTRESS MODE</div>
+      <select class="ctl-select" id="fortress-mode" data-key="fortress_mode">
+        <option value="auto" selected>AUTO</option><option value="manual">MANUAL</option>
+      </select>
+    </div>
+    <div class="ctl-group"><div class="ctl-label">MIN TX SIZE (USD)</div><input type="number" class="wd-input" id="min-tx" value="0" data-key="min_tx_size"></div>
+    <div class="ctl-group"><div class="ctl-label">AUTO-WITHDRAW THRESHOLD</div>
+      <select class="ctl-select" id="auto-wd" data-key="auto_withdraw_threshold">
+        <option value="0" selected>OFF</option><option value="10000">$10,000</option><option value="100000">$100,000</option><option value="1000000">$1,000,000</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="withdraw-section">
+  <div class="controls-title">Treasury Withdrawal</div>
+  <div class="withdraw-grid">
+    <div class="wd-field"><div class="wd-label">AMOUNT (USD)</div><input type="number" class="wd-input" id="wd-amount" placeholder="0.00" min="1" step="0.01"></div>
+    <div class="wd-field"><div class="wd-label">DESTINATION NUMBER</div><input type="text" class="wd-input" id="wd-dest" placeholder="7XXXXXXX"></div>
+    <div class="wd-field"><div class="wd-label">NETWORK</div>
+      <select class="wd-select" id="wd-network"><option value="wave">WAVE</option><option value="afrimoney">AFRIMONEY</option></select>
+    </div>
+    <button class="wd-btn" id="wd-btn" onclick="doWithdraw()">WITHDRAW</button>
+  </div>
+  <div class="wd-msg" id="wd-msg"></div>
+</div>
+
+<script>
+let ws, _d = {}, _prevProfit = 0
+
+const $ = id => document.getElementById(id)
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  ws = new WebSocket(`${proto}//${location.host}`)
+  ws.onopen = () => {
+    setConn(true)
+    fetch('/api/state').then(r => r.json()).then(render).catch(() => {})
+    fetch('/api/controls').then(r => r.json()).then(syncControls).catch(() => {})
+  }
+  ws.onmessage = e => { try { const m = JSON.parse(e.data); handleMessage(m) } catch {} }
+  ws.onclose = () => { setConn(false); setTimeout(connect, 2500) }
+  ws.onerror = () => ws.close()
+}
+
+function setConn(ok) {
+  $('conn-dot').className = 'dot' + (ok ? '' : ' warn')
+  $('conn-text').textContent = ok ? 'LIVE' : 'RECONNECTING'
+}
+
+function handleMessage(m) {
+  if (m.type === 'tick' && m.data) render(m.data)
+  if (m.type === 'ledger_credit') pushTx(m.data)
+  if (m.type === 'operation') updateOperation(m.data)
+  if (m.type === 'network') updateParent(m.data)
+  if (m.type === 'dominion') updateDominion(m.data)
+  if (m.type === 'withdrawal') flashWithdrawMsg(`Withdrawal ${m.data.status}: $${m.data.amount}`, true)
+  if (m.type === 'controls') syncControls(m.data)
+}
+
+function pushTx(d) {
+  const row = document.createElement('div')
+  row.className = 'tx-row'
+  row.innerHTML = `<span class="tx-id">${(d.name || d.id || '').slice(0, 22)}</span><span class="tx-amt">+$${(d.amount || 0).toFixed(4)}</span>`
+  const feed = $('tx-feed')
+  feed.insertBefore(row, feed.firstChild)
+  while (feed.children.length > 30) feed.removeChild(feed.lastChild)
+}
+
+function updateOperation(d) {
+  const map = { SINGULARITY: ['bar-sing', 'status-sing'], SEQUENCE: ['bar-seq', 'status-seq'], FORTRESS: ['bar-fort', 'status-fort'], DOMINION: ['bar-dom', 'status-dom'] }
+  const ids = map[d.name]
+  if (!ids) return
+  const [barId, statusId] = ids
+  if (d.phase === 'complete' || d.name === 'DOMINION') {
+    $(barId).style.width = '100%'
+    $(statusId).textContent = d.message || 'Complete'
+  } else if (typeof d.phase === 'number') {
+    $(barId).style.width = (d.phase / 10 * 100) + '%'
+    $(statusId).textContent = d.phaseName || ('Phase ' + d.phase)
+  } else {
+    $(statusId).textContent = d.message || d.phase || ''
+  }
+}
+
+function updateParent(d) {
+  const el = document.querySelector(`[data-parent="${d.parent}"] .parent-status`)
+  if (el) { el.textContent = d.status.toUpperCase(); el.className = 'parent-status ' + d.status }
+}
+
+function updateDominion(d) {
+  $('bar-dom').style.width = '100%'
+  $('status-dom').textContent = `${d.checks} checks · ${d.reprices} reprices`
+}
+
+function flashWithdrawMsg(text, ok) {
+  const el = $('wd-msg')
+  el.textContent = text
+  el.className = 'wd-msg ' + (ok ? 'ok' : 'err')
+}
+
+function render(d) {
+  if (!d) return
+  _d = d
+  const t = d.treasury || {}
+
+  $('profit-total').textContent = '$' + fmtM(t.total || 0)
+  $('profit-today').textContent = '$' + fmtM(t.today || 0)
+  $('profit-hour').textContent  = '$' + fmtM(t.hour || 0) + ' / hour'
+  $('withdrawable').textContent = '$' + fmtM(t.withdrawable || 0)
+  $('withdrawn-total').textContent = 'Withdrawn: $' + fmtM(t.withdrawn || 0)
+
+  const delta = (t.total || 0) - _prevProfit
+  if (delta > 0.001) $('profit-delta').textContent = '+$' + delta.toFixed(2) + ' since last tick'
+  _prevProfit = t.total || 0
+
+  const fort = d.fortress || {}
+  $('capture-rate').textContent = (fort.capture || 0) + '%'
+
+  // Operations
+  if (fort.phases) {
+    const done = fort.phases.filter(p => p.done).length
+    $('bar-fort').style.width = (done / 10 * 100) + '%'
+    $('status-fort').textContent = fort.active ? (fort.phaseName || 'Running') : (fort.capture >= 97 ? 'Complete — 97% locked' : 'Pending')
+  }
+
+  // Parents
+  const parents = d.parents || {}
+  $('parent-grid').innerHTML = Object.entries(parents).map(([name, status]) => `
+    <div class="parent-card" data-parent="${name}">
+      <div class="parent-name">${name.toUpperCase()}</div>
+      <div class="parent-status ${status}">${status.toUpperCase()}</div>
+    </div>`).join('')
+
+  // Streams
+  const streams = (d.streams || []).filter(s => s.total > 0).slice(0, 15)
+  $('stream-list').innerHTML = streams.map(s => `
+    <div class="stream-row"><span class="stream-name">${s.name}</span><span class="stream-val">$${fmtM(s.total)}</span></div>
+  `).join('') || '<div style="font-size:10px;color:var(--muted)">No revenue yet</div>'
+
+  // Recent tx
+  const recent = d.recent || []
+  if (recent.length) {
+    $('tx-feed').innerHTML = recent.slice(0, 20).map(tx => `
+      <div class="tx-row"><span class="tx-id">${(tx.stream || '').slice(0, 18)} · ${(tx.parent || '')}</span><span class="tx-amt">+$${(tx.amount || 0).toFixed(4)}</span></div>
+    `).join('')
+  }
+
+  $('uptime').textContent = fmtTime(d.uptime || 0)
+  $('memory').textContent = (d.memory || 0) + 'MB'
+
+  if (d.dominion?.running) {
+    $('bar-dom').style.width = '100%'
+    $('status-dom').textContent = `${d.dominion.checks} checks · ${d.dominion.reprices} reprices`
+  }
+}
+
+function syncControls(c) {
+  if (!c) return
+  document.querySelectorAll('.ctl-slider[data-key^="gp"]').forEach(s => {
+    const k = s.dataset.key
+    if (c[k] !== undefined) { s.value = c[k]; const v = $('v-' + k); if (v) v.textContent = c[k] }
+  })
+  const feeSlider = document.querySelector('[data-key="global_fee"]')
+  if (feeSlider && c.global_fee !== undefined) { feeSlider.value = c.global_fee * 100; $('v-fee').textContent = (c.global_fee * 100) + '%' }
+  if (c.dominion_sensitivity) $('dominion-sens').value = c.dominion_sensitivity
+  if (c.fortress_mode) $('fortress-mode').value = c.fortress_mode
+  if (c.min_tx_size !== undefined) $('min-tx').value = c.min_tx_size
+  if (c.auto_withdraw_threshold !== undefined) $('auto-wd').value = c.auto_withdraw_threshold
+}
+
+document.querySelectorAll('.ctl-slider, .ctl-select, #min-tx').forEach(el => {
+  el.addEventListener('input', () => {
+    const key = el.dataset.key
+    if (!key) return
+    let value = el.value
+    if (el.classList.contains('ctl-slider')) {
+      const label = $('v-' + key)
+      if (label) label.textContent = el.dataset.pct ? (value * 1 / 1).toFixed(1) + '%' : value
+      if (key === 'global_fee') { value = value / 100; $('v-fee').textContent = (value * 100).toFixed(1) + '%' }
+    }
+    fetch('/api/controls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, value }) }).catch(() => {})
+  })
+})
+
+async function doWithdraw() {
+  const amount = parseFloat($('wd-amount').value)
+  const dest   = $('wd-dest').value.trim()
+  const network = $('wd-network').value
+  const btn = $('wd-btn')
+  if (!amount || amount <= 0) { flashWithdrawMsg('Enter a valid amount', false); return }
+  if (!dest) { flashWithdrawMsg('Enter destination number', false); return }
+  btn.disabled = true; btn.textContent = 'PROCESSING'
+  try {
+    const r = await fetch('/api/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount, destination: dest, network }) })
+    const data = await r.json()
+    if (data.ok) { flashWithdrawMsg(`Withdrawal initiated — ref ${data.ref}`, true); $('wd-amount').value = '' }
+    else flashWithdrawMsg(data.error || 'Withdrawal failed', false)
+  } catch (e) { flashWithdrawMsg(e.message, false) }
+  btn.disabled = false; btn.textContent = 'WITHDRAW'
+}
+
+function fmtM(n) {
+  if (!n) return '0.00'
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B'
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'
+  if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K'
+  return n.toFixed(2)
+}
+function fmtTime(s) {
+  if (s < 60) return s + 's'
+  if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's'
+  return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm'
+}
+
+connect()
+</script>
+</body>
+</html>
